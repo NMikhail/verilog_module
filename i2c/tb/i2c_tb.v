@@ -45,17 +45,40 @@ initial begin
 	#(Tclk);
 	addr 	= 7'b001_0000; lenMsg = 8'b0000_0001; rdWr = 0; startTxRx = 0; 					//addr
 	//Transaction #2 with ack and tx one msg
-	#(1024*2*Tclk);
+	#(1024*20*Tclk);
 	addr 	= 7'b001_0000; lenMsg = 8'b0000_0001; rdWr = 0; startTxRx = 1; 	sda_slave = 1'b0;//addr
 	inData = 8'b0100_1010; inValid = 1'b1;																//tx
 	#(Tclk);
 	addr 	= 7'b001_0000; lenMsg = 8'b0000_0001; rdWr = 0; startTxRx = 0; 					//addr
+	#(1024*40*Tclk);
+	sda_slave = 1'b1;//addr
+	#(2*Tclk);
 	//Transaction #3 with ack and tx two msg
-	#(1024*2*Tclk);
 	addr 	= 7'b001_0000; lenMsg = 8'b0000_0010; rdWr = 0; startTxRx = 1; 	sda_slave = 1'b0;//addr
 	inData = 8'b0100_1010; inValid = 1'b1;																//tx
 	#(Tclk);
-	addr 	= 7'b001_0000; lenMsg = 8'b0000_0001; rdWr = 0; startTxRx = 0; 					//addr
+	addr 	= 7'b001_0000; lenMsg = 8'b0000_0010; rdWr = 0; startTxRx = 0; 					//addr
+	#(1024*60*Tclk);
+	sda_slave = 1'b1;//addr
+	#(2*Tclk);
+	//Transaction #4 with ack and rx msg
+	addr 	= 7'b001_0000; lenMsg = 8'b0000_0010; rdWr = 1; startTxRx = 1; 	sda_slave = 1'b1;//addr
+	inData = 8'b0100_1010; inValid = 1'b1;																//tx
+	#(Tclk);
+	addr 	= 7'b001_0000; lenMsg = 8'b0000_0010; rdWr = 1; startTxRx = 0; 					//addr
+	#(512*Tclk);
+	#(1024*8*Tclk);	sda_slave = 1'b0; //Ack
+	#(1024*1*Tclk); sda_slave = 1'b1;
+	#(1024*1*Tclk); sda_slave = 1'b0;
+	#(1024*1*Tclk); sda_slave = 1'b0;
+	#(1024*1*Tclk); sda_slave = 1'b1;
+	#(1024*1*Tclk); sda_slave = 1'b0;
+	#(1024*1*Tclk); sda_slave = 1'b1;
+	#(1024*1*Tclk); sda_slave = 1'b1;
+	#(1024*1*Tclk); sda_slave = 1'b1;
+	#(1024*60*Tclk);
+	sda_slave = 1'b1;//addr
+	#(2*Tclk);
 end
 
 endmodule
