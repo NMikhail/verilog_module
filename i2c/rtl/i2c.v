@@ -22,8 +22,8 @@ module i2c(
     output      i2c_scl_oe
 );
 
-wire i2c_oe, sdaIn, sclIn;
-reg sclOut, sdaOut;
+wire i2c_oe, sdaIn, sclIn, sdaOut;
+reg sclOut;
 
 // assign sda = (sdaOut | ~i2c_oe)    ? 1'b1 : 1'b0;   //for debug only
 // assign scl = sclOut                 ? 1'b1 : 1'b0;  //for debug only
@@ -115,7 +115,7 @@ end
 
 //*****addr and rdwr signal capture*****
 //addr transaction regs
-reg [7:0] addrReg;
+reg [8:0] addrReg;
 reg [7:0] lenMsgReg;
 reg [7:0] cntMsg;
 reg [3:0] cntAddr;
@@ -134,13 +134,13 @@ always @(posedge clock) begin
         stateIdle:  begin
                         stopDone <= 1'b0;
                         cntAddr <= 4'd0;
-                        addrReg <= 8'h00;
+                        addrReg <= 9'h00;
                         cntMsg  <= 8'd0;
                         lenMsgReg<= 8'd0;
                         rdwrOp  <= 1'b0;
                         if (transactionStart) begin
                             cntAddr <= 4'd0;
-                            addrReg <= {addr, rdWr};
+                            addrReg <= {1'b0, addr, rdWr};
                             cntMsg  <= 8'd0;
                             lenMsgReg<= lenMsg;
                             rdwrOp  <= rdWr;
@@ -156,7 +156,7 @@ always @(posedge clock) begin
                             cntAddr <= cntAddr + 4'd1;
                         if (sclLowStrobe) begin                            
                             if (cntAddr < 4'd8) begin
-                                addrReg <= {addrReg[6:0], 1'b0};
+                                addrReg <= {addrReg[7:0], 1'b0};
                                 //sdaOut  <= addrReg[7];
                             end
                         end
@@ -177,13 +177,6 @@ always @(posedge clock) begin
                         cntRx <= cntRx + 4'd1;
                         if (cntRx < 4'd8)  
                             rxReg <= {rxReg[6:0], sdaIn};
-                        else begin
-                            ackOk <= ~sdaIn;
-                            if (outReady) begin
-                                outValid<= 1'b1;
-                                outData <= rxReg;
-                            end
-                        end
                     end
 
         stateTx:    begin
@@ -191,7 +184,7 @@ always @(posedge clock) begin
 
                         if (sclHighStrobe) begin
                             cntTx <= cntTx + 4'd1;
-                            if (cntTx == 4'd8)
+                            if (cntTx == 4'd7)
                                 cntMsg<= cntMsg + 4'd1;
                         end
 
@@ -214,27 +207,40 @@ always @(posedge clock) begin
     endcase
 end
 
-always @(state) begin
-  case (state)
-    stateStart: sdaOut <= 1'b0;
-    stateTx:    sdaOut <= txReg[7];
-    stateAddr:  sdaOut <= addrReg[7];
-    stateStop: begin
-                if (sclLowStrobe)
-                  sdaOut <= 1'b0;
-                else if (sclHighStrobe)
-                  sdaOut <= 1'b1;
-               end
-    endcase
-end
+assign sdaOut = (state == stateStart) ? 1'b0 : ((state == stateTx) ? txReg[7] : ((state == stateAddr) ? addrReg[8] : ((state == stateStop) ? (sclLowStrobe ? 1'b0 : (sclHighStrobe ? 1'b1 : sdaOut)) : sdaOut)));
+
+// always @(state) begin
+//   case (state)
+//     stateStart: sdaOut = 1'b0;
+//     stateTx:    sdaOut = txReg[7];
+//     stateAddr:  sdaOut = addrReg[7];
+//     stateStop: begin
+//                 if (sclLowStrobe)
+//                   sdaOut = 1'b0;
+//                 else if (sclHighStrobe)
+//                   sdaOut = 1'b1;
+//                end
+//     default:    sdaOut = 1'b1;
     
+//     endcase
+// end
+    
+always @(posedge clock)
+    if (rxDone) begin
+        outValid    <= 1'b1;
+        outData     <= rxReg;
+    end
+    else begin
+        outValid    <= 1'b0;
+        outData     <= outData;
+    end
 //*****control signal generation*****
 assign transactionStart = (startTxRx & sdaIn & sclIn);
 assign startDone = ((state == stateStart) & ~sclIn);
 assign addrDone = ((cntAddr == 4'd8) & sclLowStrobe);
 assign ackDone  = (state == stateAck) & sclLowStrobe;
 assign transactionDone = ((rdwrOp == 1'b0) & cntMsg == lenMsgReg) | ackOk;
-assign rxDone   = (cntRx == 4'd10);
+assign rxDone   = ((cntRx == 4'd8) & sclLowStrobe);
 assign txDone   = ((cntTx == 4'd8) & sclLowStrobe);
 
 
