@@ -147,9 +147,9 @@ always @(posedge clock) begin
                         end
                     end
 
-        stateStart: begin
-                        sdaOut <= 1'b0;
-                    end
+        // stateStart: begin
+        //                 sdaOut <= 1'b0;
+        //             end
 
         stateAddr:  begin
                         if (sclHighStrobe)
